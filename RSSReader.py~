@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+import string, sys, urllib2, inspect, datetime
+from xml.dom import minidom
+feedname = sys.argv[1]
+
+def getlistinfo(filetype):
+	filename = "feedlist." + filetype
+	datafile = open(filename, "r")
+	line = datafile.readline()
+	record = {}
+
+	while line:
+		data = string.split(line, ';')
+		feedname = data[0]
+		address = data[1]
+		record[feedname] = address
+		line = datafile.readline()
+	return record
+	
+feedinfo = getlistinfo("dat")
+
+
+class ModelFeed:
+	def __init__(self):
+		self.data = []
+
+	def getfeeddata(self, feedname):
+		feedaddress = feedinfo[feedname]
+		return feedaddress
+	
+	def getlinks(self, address):
+		file_request = urllib2.Request(address)
+		file_opener = urllib2.build_opener()
+		file_object = file_opener.open(file_request)
+		file_feed = file_object.read()
+		file_xml = minidom.parseString(file_feed)
+		item_node = file_xml.getElementsByTagName("item")
+		print len(item_node)
+		linkdata = ""
+		for item in item_node:
+			title = item.childNodes[1]
+			link = item.childNodes[3]
+			ftitle = title.firstChild.data
+			flink = link.firstChild.data
+			linkdata = linkdata + "<a href=\"" + flink + "\" target=\"target\">" + ftitle + "</a>\n"
+		return linkdata
+
+
+def formBody(feedname):
+	feed = ModelFeed()
+	feedurl = feed.getfeeddata(feedname)
+	body = feed.getlinks(feedurl)
+	output = body.encode("utf-8")
+	return output
+
+def main():
+	try:
+		output = formBody(feedname)
+		print output
+	except:
+		print "There is an error with that feed. If the problem persists, please contact the site administrator. For now, please choose another feed."
+
+if __name__ == "__main__":
+	main()
